@@ -1,3 +1,11 @@
+import sys
+import os
+
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 import os
 import yaml
 import numpy as np
@@ -5,6 +13,7 @@ import gymnasium as gym
 from src.environments.frozenlake_env import make_frozenlake_env
 from src.agents.dqn_agent import DQNAgent
 from src.visualization.plot_results import plot_rewards, plot_gamma_comparison
+
 
 RESULTS_DIR = "results"
 LOGS_DIR = os.path.join(RESULTS_DIR, "logs")
@@ -112,8 +121,8 @@ def main():
     config = load_config()
     
     # Extract parameters from config file
-    gammas = config.get("training", {}).get("gammas", [0.1, 0.5, 0.9, 0.99])
-    episodes = config.get("training", {}).get("episodes", 200)
+    gammas = config.get("training", {}).get("gammas", [0.1, 0.99])
+    episodes = config.get("training", {}).get("episodes", 20)
     is_slippery = config.get("environment", {}).get("is_slippery", True)
 
     all_rewards = {}
