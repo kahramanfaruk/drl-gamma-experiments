@@ -5,9 +5,8 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.append(project_root)
-    
-import sys
-import os
+
+
 import yaml
 import numpy as np
 import gymnasium as gym
@@ -35,7 +34,7 @@ os.makedirs(TENSORBOARD_DIR, exist_ok=True)
 # =============================================================================
 # Configuration Loader
 # =============================================================================
-def load_config(config_path="/home/faruk/Desktop/drl-gamma-experiments/config.yaml"):
+def load_config():
     """
     Load experiment configuration from YAML file.
 
@@ -49,6 +48,9 @@ def load_config(config_path="/home/faruk/Desktop/drl-gamma-experiments/config.ya
     dict
         Configuration dictionary.
     """
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    config_path = os.path.join(base_dir, "config.yaml")
+
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config
@@ -179,7 +181,8 @@ def main():
     Run DQN training experiments for multiple gamma values and log all metrics.
     """
     config = load_config()
-    
+    print("Loaded config:", config)
+
     env_config = config.get("environment", {})
     is_slippery = env_config.get("is_slippery", True)
     map_name = env_config.get("map_name", "4x4")

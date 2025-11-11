@@ -1,7 +1,9 @@
-# grid_search.py
 import os
 import itertools
 import numpy as np
+import pandas as pd
+import json
+import multiprocessing
 from torch.utils.tensorboard import SummaryWriter
 from collections import deque
 import torch
@@ -11,8 +13,7 @@ from src.visualization.plot_results import plot_rewards
 from datetime import datetime
 from experiments.run_experiments import one_hot_state
 
-
-RESULTS_DIR = "results/grid_search"
+RESULTS_DIR = r"/results/grid_search_discrete"
 LOGS_DIR = os.path.join(RESULTS_DIR, "logs")
 PLOTS_DIR = os.path.join(RESULTS_DIR, "plots")
 TENSORBOARD_DIR = os.path.join(RESULTS_DIR, "tensorboard")
@@ -23,17 +24,25 @@ os.makedirs(TENSORBOARD_DIR, exist_ok=True)
 
 
 def train_dqn(
-    gamma: float,
-    learning_rate: float,
-    batch_size: int,
-    epsilon_decay: float,
-    is_slippery: bool,
-    episodes: int = 300,
-    device: str = "cpu"
+        gamma: float,
+        learning_rate: float,
+        batch_size: int,
+        epsilon_decay: float,
+        is_slippery: bool,
+        seed: int,  # <-- Added
+        episodes: int = 500,
+        device: str = "cpu"
 ):
     """
     Train a DQN agent with given hyperparameters and return average reward.
     """
+
+    # === Seeding ===
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    # === End Seeding ===
 
     env = make_frozenlake_env(is_slippery=is_slippery)
     state_size = env.observation_space.n
@@ -46,17 +55,23 @@ def train_dqn(
         lr=learning_rate,
         batch_size=batch_size,
         epsilon_decay=epsilon_decay,
-        device=device
+        device=device,
+        seed=seed
     )
 
-    writer_name = f"gamma_{gamma}_lr_{learning_rate}_bs_{batch_size}_ed_{epsilon_decay}_slip_{is_slippery}"
+    writer_name = f"gamma_{gamma}_lr_{learning_rate}_bs_{batch_size}_ed_{epsilon_decay}_slip_{is_slippery}_seed_{seed}"
     writer = SummaryWriter(log_dir=os.path.join(TENSORBOARD_DIR, writer_name))
 
     episode_rewards = []
     reward_window = deque(maxlen=100)
 
+    # Seed the environment once before the loop
+    state, _ = env.reset(seed=seed)
+
     for episode in range(1, episodes + 1):
-        state, _ = env.reset()
+        if episode > 1:  # On subsequent episodes, just reset
+            state, _ = env.reset()
+
         state = one_hot_state(state, state_size)
         total_reward = 0
         done = False
@@ -83,8 +98,8 @@ def train_dqn(
 
         if episode % 50 == 0:
             print(
-                f"[γ={gamma}, lr={learning_rate}, bs={batch_size}, decay={epsilon_decay}, slip={is_slippery}] "
-                f"Ep {episode}/{episodes} | Reward={total_reward:.2f} | Avg100={moving_avg_reward:.3f}"
+                f"[PID {os.getpid()} | Seed {seed}] "
+                f"Ep {episode}/{episodes} | Avg100={moving_avg_reward:.3f}"
             )
 
     env.close()
@@ -95,14 +110,58 @@ def train_dqn(
     return episode_rewards, avg_final_reward
 
 
+def train_dqn_wrapper(params: dict):
+    """
+    Wrapper function for multiprocessing.
+    Runs train_dqn with a dict of params, handles metadata, and saves results.
+    """
+    # === Metadata collection ===
+    start_time = datetime.now()
+    pid = os.getpid()
+    config_name = "_".join([f"{k}_{v}" for k, v in params.items()])
+    # === End Metadata collection ===
+
+    print(f"\n🚀 [PID: {pid} | Start: {start_time.strftime('%H:%M:%S')}] Starting config: {params}")
+
+    # Run the main training function
+    rewards, avg_reward = train_dqn(**params)
+
+    # === More Metadata ===
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    # === End Metadata ===
+
+    # Save individual run artifacts
+    try:
+        np.save(os.path.join(LOGS_DIR, f"rewards_{config_name}.npy"), rewards)
+        plot_rewards(rewards, params["gamma"], os.path.join(PLOTS_DIR, f"reward_{config_name}.png"))
+    except Exception as e:
+        print(f"Error saving artifacts for {config_name}: {e}")
+
+    print(
+        f"✅ [PID: {pid}] Finished config (Seed {params.get('seed')}) | Avg Reward: {avg_reward:.3f} | Duration: {duration:.2f}s")
+
+    # Return data for the final summary
+    return {
+        "run_id": config_name,
+        "pid": pid,
+        "start_time": start_time.isoformat(),
+        "end_time": end_time.isoformat(),
+        "duration_seconds": duration,
+        **params,
+        "avg_final_reward": avg_reward
+    }
+
+
 def run_grid_search():
     """
-    Run grid search over multiple hyperparameter combinations and log results.
+    Run grid search over multiple hyperparameter combinations in parallel
+    and log results to structured formats (CSV, JSON).
     """
 
     # === Define search space ===
     param_grid = {
-        "gamma": [0.8, 0.9, 0.99],
+        "gamma": [0.8, 0.85, 0.9, 0.95, 0.99],
         "learning_rate": [1e-3, 5e-4],
         "batch_size": [64, 128],
         "epsilon_decay": [0.995, 0.99],
@@ -111,38 +170,47 @@ def run_grid_search():
 
     # Generate all combinations
     keys, values = zip(*param_grid.items())
-    all_combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
+    param_combinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    print(f"\n🔍 Running grid search over {len(all_combinations)} configurations...\n")
+    # === Add unique seed to each combination ===
+    all_combinations = [
+        {**params, "seed": i} for i, params in enumerate(param_combinations)
+    ]
+    # === End seed addition ===
 
-    results_summary = []
+    print(f"\n🔍 Running grid search over {len(all_combinations)} configurations in parallel...\n")
 
-    for params in all_combinations:
-        print(f"\n🚀 Training with config: {params}")
-        rewards, avg_reward = train_dqn(**params)
-        config_name = "_".join([f"{k}_{v}" for k, v in params.items()])
+    # === Run experiments in parallel ===
+    with multiprocessing.Pool() as pool:
+        results_summary = pool.map(train_dqn_wrapper, all_combinations)
 
-        np.save(os.path.join(LOGS_DIR, f"rewards_{config_name}.npy"), rewards)
-        plot_rewards(rewards, params["gamma"], os.path.join(PLOTS_DIR, f"reward_{config_name}.png"))
+    print("\n\n" + "=" * 30)
+    print("✅ All training runs complete. Compiling summary...")
+    print("=" * 30 + "\n")
 
-        results_summary.append({
-            **params,
-            "avg_final_reward": avg_reward
-        })
+    # === Save summary ===
+    results_df = pd.DataFrame(results_summary)
 
-    # Save summary
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    summary_path = os.path.join(RESULTS_DIR, f"grid_search_summary_{timestamp}.txt")
+    # Sort by reward to see the best configurations at the top
+    results_df = results_df.sort_values(by="avg_final_reward", ascending=False)
 
-    with open(summary_path, "w") as f:
-        f.write("DQN Grid Search Results\n")
-        f.write("========================\n\n")
-        for r in results_summary:
-            f.write(str(r) + "\n")
+    timestamp = datetime.now().strftime("%Y%m%d-%H_%M_%S")
 
-    print(f"\n✅ Grid search complete! Results saved to {summary_path}\n")
-    best_config = max(results_summary, key=lambda x: x["avg_final_reward"])
-    print(f"🏆 Best Configuration: {best_config}\n")
+    # --- Save as CSV ---
+    csv_path = os.path.join(RESULTS_DIR, f"grid_search_summary_{timestamp}.csv")
+    results_df.to_csv(csv_path, index=False)
+    print(f"📊 Results summary saved to: {csv_path}")
+
+    # --- Save as JSON ---
+    json_path = os.path.join(RESULTS_DIR, f"grid_search_summary_{timestamp}.json")
+    results_df.to_json(json_path, orient="records", indent=2)
+    print(f"📄 JSON summary saved to: {json_path}")
+
+    # --- Print best config ---
+    best_config = results_df.iloc[0].to_dict()
+    print("\n🏆 Best Configuration:")
+    # Pretty print the best config dict
+    print(json.dumps(best_config, indent=2))
 
 
 if __name__ == "__main__":

@@ -65,6 +65,7 @@ class DQNAgent:
         state_size: int,
         action_size: int,
         gamma: float,
+        seed: int,
         lr: float = 1e-3,
         batch_size: int = 64,
         buffer_size: int = 10_000,
@@ -93,6 +94,8 @@ class DQNAgent:
 
         self.optimizer = optim.Adam(self.policy_net.parameters(), lr=lr)
         self.loss_fn = nn.MSELoss()
+
+        random.seed(seed)
 
         self.learn_step_counter = 0
         self.target_update_freq = 1000  # Steps to update target net
