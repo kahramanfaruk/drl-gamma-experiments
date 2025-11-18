@@ -23,7 +23,7 @@ from src.utils.utils import one_hot_state
 
 print(ROOT_DIR)
 
-RESULTS_DIR = os.path.join(ROOT_DIR, "results", "grid_search_discrete_stochastic")
+RESULTS_DIR = os.path.join(ROOT_DIR, "results", "grid_search_discrete_deterministic")
 LOGS_DIR = os.path.join(RESULTS_DIR, "logs")
 PLOTS_DIR = os.path.join(RESULTS_DIR, "plots")
 TENSORBOARD_DIR = os.path.join(RESULTS_DIR, "tensorboard")
@@ -43,7 +43,7 @@ def train_dqn(
         is_slippery: bool,
         seed: int, 
         reward_schedule: tuple = (1, -1, -0.01),
-        episodes: int = 2,
+        episodes: int = 1000,
         device: str = "cpu"
 ):
     """
@@ -185,8 +185,8 @@ def run_grid_search():
         "gamma": [0.8, 0.85, 0.9, 0.95, 0.99],
         "learning_rate": [1e-3, 5e-4],
         "batch_size": [64, 128],
-        "epsilon_decay": [0.995, 0.99],
-        "is_slippery": [True],
+        "epsilon_decay": [0.95, 0.99],
+        "is_slippery": [False],
         "reward_schedule": [REWARD_SCHEDULE]
     }
 

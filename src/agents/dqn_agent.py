@@ -151,11 +151,13 @@ class DQNAgent:
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        states = torch.FloatTensor(states).to(self.device)
-        actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
-        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
-        next_states = torch.FloatTensor(next_states).to(self.device)
-        dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
+        # Wrap each list in np.array() before passing to torch.FloatTensor
+        # This prevents the "slow creation" warning and speeds up training significantly.
+        states = torch.FloatTensor(np.array(states)).to(self.device)
+        actions = torch.LongTensor(np.array(actions)).unsqueeze(1).to(self.device)
+        rewards = torch.FloatTensor(np.array(rewards)).unsqueeze(1).to(self.device)
+        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
+        dones = torch.FloatTensor(np.array(dones)).unsqueeze(1).to(self.device)
 
         # Q-values for current states
         q_values = self.policy_net(states).gather(1, actions)
@@ -175,12 +177,5 @@ class DQNAgent:
         # Update target network periodically
         if self.learn_step_counter % self.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
-
-        # Uncomment he decay epsiloon for stochastic training
-        # Decay epsilon
-        #if self.epsilon > self.epsilon_min:
-        #    self.epsilon *= self.epsilon_decay
-        #    self.epsilon = max(self.epsilon, self.epsilon_min)
-
 
         return loss.item()
