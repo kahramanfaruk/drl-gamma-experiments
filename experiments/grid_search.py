@@ -1,3 +1,10 @@
+import sys
+import os
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(ROOT_DIR)
+
+
 import os
 import itertools
 import numpy as np
@@ -11,12 +18,17 @@ from src.agents.dqn_agent import DQNAgent
 from src.environments.frozenlake_env import make_frozenlake_env
 from src.visualization.plot_results import plot_rewards
 from datetime import datetime
-from experiments.run_experiments import one_hot_state
+from src.utils.utils import one_hot_state
 
-RESULTS_DIR = r"/results/grid_search_discrete"
+
+print(ROOT_DIR)
+
+RESULTS_DIR = os.path.join(ROOT_DIR, "results", "grid_search_discrete_stochastic")
 LOGS_DIR = os.path.join(RESULTS_DIR, "logs")
 PLOTS_DIR = os.path.join(RESULTS_DIR, "plots")
 TENSORBOARD_DIR = os.path.join(RESULTS_DIR, "tensorboard")
+
+REWARD_SCHEDULE = (1, -1, -0.01)
 
 os.makedirs(LOGS_DIR, exist_ok=True)
 os.makedirs(PLOTS_DIR, exist_ok=True)
@@ -29,8 +41,9 @@ def train_dqn(
         batch_size: int,
         epsilon_decay: float,
         is_slippery: bool,
-        seed: int,  # <-- Added
-        episodes: int = 500,
+        seed: int, 
+        reward_schedule: tuple = (1, -1, -0.01),
+        episodes: int = 2,
         device: str = "cpu"
 ):
     """
@@ -44,7 +57,8 @@ def train_dqn(
         torch.cuda.manual_seed_all(seed)
     # === End Seeding ===
 
-    env = make_frozenlake_env(is_slippery=is_slippery)
+    env = make_frozenlake_env(is_slippery=is_slippery,
+                              reward_schedule=reward_schedule)
     state_size = env.observation_space.n
     action_size = env.action_space.n
 
@@ -87,6 +101,13 @@ def train_dqn(
 
             state = next_state
             total_reward += reward
+
+        # Decay epsilon once per episode for stochastic env
+        # Without this change, your agent will stop exploring almost immediately and will not be able to 
+        # solve the stochastic (is_slippery: True) environment.
+        if agent.epsilon > agent.epsilon_min:
+            agent.epsilon *= agent.epsilon_decay
+            agent.epsilon = max(agent.epsilon, agent.epsilon_min)
 
         episode_rewards.append(total_reward)
         reward_window.append(total_reward)
@@ -165,7 +186,8 @@ def run_grid_search():
         "learning_rate": [1e-3, 5e-4],
         "batch_size": [64, 128],
         "epsilon_decay": [0.995, 0.99],
-        "is_slippery": [False],
+        "is_slippery": [True],
+        "reward_schedule": [REWARD_SCHEDULE]
     }
 
     # Generate all combinations

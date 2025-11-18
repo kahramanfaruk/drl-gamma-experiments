@@ -1,7 +1,7 @@
 # config.yaml
 environment:
   name: FrozenLake-v1
-  is_slippery: False
+  is_slippery: True
   map_name: 4x4
   reward_schedule: [1, -1, -0.01] # Goal, hole, normal move
 

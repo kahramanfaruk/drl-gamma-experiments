@@ -16,7 +16,7 @@ from src.agents.dqn_agent import DQNAgent
 from src.visualization.plot_results import plot_rewards, plot_gamma_comparison, plot_losses
 from collections import deque
 import torch
-
+from src.utils import one_hot_state
 
 # =============================================================================
 # Directory Setup

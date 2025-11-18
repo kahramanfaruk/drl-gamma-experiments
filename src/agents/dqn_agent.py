@@ -176,10 +176,11 @@ class DQNAgent:
         if self.learn_step_counter % self.target_update_freq == 0:
             self.target_net.load_state_dict(self.policy_net.state_dict())
 
+        # Uncomment he decay epsiloon for stochastic training
         # Decay epsilon
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
-            self.epsilon = max(self.epsilon, self.epsilon_min)
+        #if self.epsilon > self.epsilon_min:
+        #    self.epsilon *= self.epsilon_decay
+        #    self.epsilon = max(self.epsilon, self.epsilon_min)
 
 
         return loss.item()
