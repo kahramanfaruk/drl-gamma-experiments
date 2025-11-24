@@ -1,0 +1,133 @@
+========================================
+STARTING DETERMINISTIC STUDY
+========================================
+
+ Testing Gamma = 0.1 [deterministic]...
+   > Ep 200: Avg Reward=0.879 | Steps=14 | Loss=0.0000
+   > Ep 400: Avg Reward=0.877 | Steps=13 | Loss=0.0000
+   > Ep 600: Avg Reward=0.836 | Steps=7 | Loss=0.0000
+   > Ep 800: Avg Reward=0.842 | Steps=11 | Loss=0.0000
+   > Ep 1000: Avg Reward=0.719 | Steps=17 | Loss=0.0000
+ Data saved for Gamma=0.1 in deterministic/
+
+ Testing Gamma = 0.3 [deterministic]...
+   > Ep 200: Avg Reward=0.922 | Steps=8 | Loss=0.0000
+   > Ep 400: Avg Reward=0.909 | Steps=6 | Loss=0.0000
+   > Ep 600: Avg Reward=0.948 | Steps=6 | Loss=0.0000
+   > Ep 800: Avg Reward=0.950 | Steps=6 | Loss=0.0000
+   > Ep 1000: Avg Reward=0.909 | Steps=6 | Loss=0.0000
+ Data saved for Gamma=0.3 in deterministic/
+
+ Testing Gamma = 0.5 [deterministic]...
+   > Ep 200: Avg Reward=0.927 | Steps=6 | Loss=0.0000
+   > Ep 400: Avg Reward=0.910 | Steps=6 | Loss=0.0000
+   > Ep 600: Avg Reward=0.910 | Steps=6 | Loss=0.0000
+   > Ep 800: Avg Reward=0.950 | Steps=6 | Loss=0.0000
+   > Ep 1000: Avg Reward=0.950 | Steps=6 | Loss=0.0000
+ Data saved for Gamma=0.5 in deterministic/
+
+ Testing Gamma = 0.7 [deterministic]...
+   > Ep 200: Avg Reward=0.486 | Steps=12 | Loss=0.0002
+   > Ep 400: Avg Reward=0.924 | Steps=6 | Loss=0.0003
+   > Ep 600: Avg Reward=0.950 | Steps=6 | Loss=0.0002
+   > Ep 800: Avg Reward=0.950 | Steps=6 | Loss=0.0003
+   > Ep 1000: Avg Reward=0.949 | Steps=6 | Loss=0.0000
+ Data saved for Gamma=0.7 in deterministic/
+
+ Testing Gamma = 0.9 [deterministic]...
+   > Ep 200: Avg Reward=0.523 | Steps=42 | Loss=0.0000
+   > Ep 400: Avg Reward=0.910 | Steps=4 | Loss=0.0043
+   > Ep 600: Avg Reward=0.950 | Steps=6 | Loss=0.0018
+   > Ep 800: Avg Reward=0.950 | Steps=6 | Loss=0.0000
+   > Ep 1000: Avg Reward=0.910 | Steps=6 | Loss=0.0000
+ Data saved for Gamma=0.9 in deterministic/
+
+ Testing Gamma = 0.99 [deterministic]...
+   > Ep 200: Avg Reward=0.122 | Steps=6 | Loss=0.0000
+   > Ep 400: Avg Reward=0.840 | Steps=6 | Loss=0.0002
+   > Ep 600: Avg Reward=0.898 | Steps=17 | Loss=0.0018
+   > Ep 800: Avg Reward=0.859 | Steps=6 | Loss=0.0022
+   > Ep 1000: Avg Reward=0.872 | Steps=6 | Loss=0.0001
+ Data saved for Gamma=0.99 in deterministic/
+
+========================================
+STARTING STOCHASTIC STUDY
+========================================
+
+ Testing Gamma = 0.1 [stochastic]...
+   > Ep 200: Avg Reward=-0.959 | Steps=51 | Loss=0.0607
+   > Ep 400: Avg Reward=-0.793 | Steps=18 | Loss=0.0345
+   > Ep 600: Avg Reward=-0.650 | Steps=5 | Loss=0.0176
+   > Ep 800: Avg Reward=-0.426 | Steps=41 | Loss=0.0124
+   > Ep 1000: Avg Reward=-0.494 | Steps=9 | Loss=0.0138
+   > Ep 1200: Avg Reward=-0.566 | Steps=100 | Loss=0.0110
+   > Ep 1400: Avg Reward=-0.460 | Steps=6 | Loss=0.0052
+   > Ep 1600: Avg Reward=-0.635 | Steps=28 | Loss=0.0112
+   > Ep 1800: Avg Reward=-0.384 | Steps=35 | Loss=0.0076
+   > Ep 2000: Avg Reward=-0.753 | Steps=100 | Loss=0.0116
+ Data saved for Gamma=0.1 in stochastic/
+
+ Testing Gamma = 0.3 [stochastic]...
+   > Ep 200: Avg Reward=-1.087 | Steps=10 | Loss=0.0528
+   > Ep 400: Avg Reward=-1.007 | Steps=14 | Loss=0.0382
+   > Ep 600: Avg Reward=-0.757 | Steps=19 | Loss=0.0131
+   > Ep 800: Avg Reward=-0.469 | Steps=59 | Loss=0.0122
+   > Ep 1000: Avg Reward=-0.415 | Steps=24 | Loss=0.0108
+   > Ep 1200: Avg Reward=-0.194 | Steps=100 | Loss=0.0085
+   > Ep 1400: Avg Reward=-0.343 | Steps=100 | Loss=0.0086
+   > Ep 1600: Avg Reward=-0.590 | Steps=27 | Loss=0.0056
+   > Ep 1800: Avg Reward=-0.637 | Steps=69 | Loss=0.0089
+   > Ep 2000: Avg Reward=-0.371 | Steps=20 | Loss=0.0097
+ Data saved for Gamma=0.3 in stochastic/
+
+ Testing Gamma = 0.5 [stochastic]...
+   > Ep 200: Avg Reward=-0.972 | Steps=5 | Loss=0.0562
+   > Ep 400: Avg Reward=-0.891 | Steps=27 | Loss=0.0358
+   > Ep 600: Avg Reward=-0.750 | Steps=100 | Loss=0.0153
+   > Ep 800: Avg Reward=-0.213 | Steps=100 | Loss=0.0086
+   > Ep 1000: Avg Reward=-0.187 | Steps=63 | Loss=0.0088
+   > Ep 1200: Avg Reward=-0.393 | Steps=100 | Loss=0.0066
+   > Ep 1400: Avg Reward=-0.419 | Steps=100 | Loss=0.0092
+   > Ep 1600: Avg Reward=-0.461 | Steps=78 | Loss=0.0059
+   > Ep 1800: Avg Reward=-0.419 | Steps=100 | Loss=0.0084
+   > Ep 2000: Avg Reward=-0.229 | Steps=70 | Loss=0.0077
+ Data saved for Gamma=0.5 in stochastic/
+
+ Testing Gamma = 0.7 [stochastic]...
+   > Ep 200: Avg Reward=-0.944 | Steps=9 | Loss=0.0618
+   > Ep 400: Avg Reward=-0.832 | Steps=16 | Loss=0.0323
+   > Ep 600: Avg Reward=-0.680 | Steps=33 | Loss=0.0170
+   > Ep 800: Avg Reward=-0.559 | Steps=21 | Loss=0.0102
+   > Ep 1000: Avg Reward=-0.556 | Steps=12 | Loss=0.0071
+   > Ep 1200: Avg Reward=-0.211 | Steps=8 | Loss=0.0079
+   > Ep 1400: Avg Reward=-0.409 | Steps=100 | Loss=0.0087
+   > Ep 1600: Avg Reward=-0.277 | Steps=59 | Loss=0.0076
+   > Ep 1800: Avg Reward=-0.222 | Steps=63 | Loss=0.0104
+   > Ep 2000: Avg Reward=-0.474 | Steps=100 | Loss=0.0068
+ Data saved for Gamma=0.7 in stochastic/
+
+ Testing Gamma = 0.9 [stochastic]...
+   > Ep 200: Avg Reward=-1.052 | Steps=22 | Loss=0.0632
+   > Ep 400: Avg Reward=-1.021 | Steps=100 | Loss=0.0408
+   > Ep 600: Avg Reward=-0.420 | Steps=26 | Loss=0.0207
+   > Ep 800: Avg Reward=-0.240 | Steps=23 | Loss=0.0162
+   > Ep 1000: Avg Reward=-0.090 | Steps=49 | Loss=0.0120
+   > Ep 1200: Avg Reward=0.056 | Steps=68 | Loss=0.0126
+   > Ep 1400: Avg Reward=0.110 | Steps=15 | Loss=0.0121
+   > Ep 1600: Avg Reward=-0.111 | Steps=83 | Loss=0.0156
+   > Ep 1800: Avg Reward=-0.414 | Steps=48 | Loss=0.0120
+   > Ep 2000: Avg Reward=0.082 | Steps=24 | Loss=0.0112
+ Data saved for Gamma=0.9 in stochastic/
+
+ Testing Gamma = 0.99 [stochastic]...
+   > Ep 200: Avg Reward=-1.084 | Steps=7 | Loss=0.0596
+   > Ep 400: Avg Reward=-0.859 | Steps=34 | Loss=0.0487
+   > Ep 600: Avg Reward=-0.326 | Steps=13 | Loss=0.0272
+   > Ep 800: Avg Reward=-0.025 | Steps=28 | Loss=0.0205
+   > Ep 1000: Avg Reward=0.205 | Steps=27 | Loss=0.0144
+   > Ep 1200: Avg Reward=0.146 | Steps=9 | Loss=0.0199
+   > Ep 1400: Avg Reward=-0.004 | Steps=35 | Loss=0.0153
+   > Ep 1600: Avg Reward=-0.179 | Steps=100 | Loss=0.0184
+   > Ep 1800: Avg Reward=0.141 | Steps=100 | Loss=0.0151
+   > Ep 2000: Avg Reward=0.090 | Steps=100 | Loss=0.0186
+ Data saved for Gamma=0.99 in stochastic/
