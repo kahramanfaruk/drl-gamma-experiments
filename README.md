@@ -40,7 +40,7 @@ Ensure you have Python 3.8+ installed. Install the required dependencies:
 pip install gymnasium torch matplotlib numpy pandas tensorboard seaborn pyyaml
 ```
 
-## Usage Guide
+## 🚀 Usage Guide
 ### Phase 1: Hyperparameter Search
 
 Run a grid search to find the best hyperparameters for both deterministic and stochastic environments.
