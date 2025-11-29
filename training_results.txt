@@ -131,3 +131,56 @@ STARTING STOCHASTIC STUDY
    > Ep 1800: Avg Reward=0.141 | Steps=100 | Loss=0.0151
    > Ep 2000: Avg Reward=0.090 | Steps=100 | Loss=0.0186
  Data saved for Gamma=0.99 in stochastic/
+
+
+
+
+
+========================================
+ADAPTIVE GAMMA STUDY - STOCHASTIC STUDY
+========================================
+  Starting Experiment: fixed
+   > Ep 100: Reward=-1.038 | Gamma=0.990 | Q=0.014
+   > Ep 200: Reward=-1.084 | Gamma=0.990 | Q=0.051
+   > Ep 300: Reward=-0.975 | Gamma=0.990 | Q=0.038
+   > Ep 400: Reward=-0.859 | Gamma=0.990 | Q=0.008
+   > Ep 500: Reward=-0.616 | Gamma=0.990 | Q=0.198
+   > Ep 600: Reward=-0.326 | Gamma=0.990 | Q=0.392
+   > Ep 700: Reward=-0.177 | Gamma=0.990 | Q=0.035
+   > Ep 800: Reward=-0.025 | Gamma=0.990 | Q=0.189
+   > Ep 900: Reward=0.217 | Gamma=0.990 | Q=0.112
+   > Ep 1000: Reward=0.205 | Gamma=0.990 | Q=0.201
+   > Ep 1100: Reward=-0.077 | Gamma=0.990 | Q=0.164
+   > Ep 1200: Reward=0.146 | Gamma=0.990 | Q=0.189
+   > Ep 1300: Reward=0.070 | Gamma=0.990 | Q=0.037
+   > Ep 1400: Reward=-0.004 | Gamma=0.990 | Q=0.256
+   > Ep 1500: Reward=-0.069 | Gamma=0.990 | Q=0.280
+   > Ep 1600: Reward=-0.179 | Gamma=0.990 | Q=0.050
+   > Ep 1700: Reward=-0.063 | Gamma=0.990 | Q=0.107
+   > Ep 1800: Reward=0.141 | Gamma=0.990 | Q=0.080
+   > Ep 1900: Reward=-0.107 | Gamma=0.990 | Q=0.328
+   > Ep 2000: Reward=0.090 | Gamma=0.990 | Q=0.110
+ Completed fixed
+
+ Starting Experiment: adaptive
+   > Ep 100: Reward=-1.084 | Gamma=0.819 | Q=0.033
+   > Ep 200: Reward=-1.078 | Gamma=0.838 | Q=-0.002
+   > Ep 300: Reward=-0.906 | Gamma=0.857 | Q=-0.006
+   > Ep 400: Reward=-0.822 | Gamma=0.876 | Q=0.061
+   > Ep 500: Reward=-0.880 | Gamma=0.895 | Q=-0.007
+   > Ep 600: Reward=-0.296 | Gamma=0.914 | Q=0.061
+   > Ep 700: Reward=-0.371 | Gamma=0.933 | Q=0.036
+   > Ep 800: Reward=-0.345 | Gamma=0.952 | Q=-0.055
+   > Ep 900: Reward=-0.195 | Gamma=0.971 | Q=0.070
+   > Ep 1000: Reward=-0.155 | Gamma=0.990 | Q=0.036
+   > Ep 1100: Reward=-0.076 | Gamma=0.990 | Q=-0.038
+   > Ep 1200: Reward=0.020 | Gamma=0.990 | Q=-0.030
+   > Ep 1300: Reward=0.219 | Gamma=0.990 | Q=0.209
+   > Ep 1400: Reward=-0.118 | Gamma=0.990 | Q=-0.006
+   > Ep 1500: Reward=0.013 | Gamma=0.990 | Q=0.248
+   > Ep 1600: Reward=0.061 | Gamma=0.990 | Q=-0.051
+   > Ep 1700: Reward=-0.145 | Gamma=0.990 | Q=0.082
+   > Ep 1800: Reward=-0.065 | Gamma=0.990 | Q=0.134
+   > Ep 1900: Reward=-0.071 | Gamma=0.990 | Q=0.243
+   > Ep 2000: Reward=-0.017 | Gamma=0.990 | Q=0.218
+ Completed adaptive
