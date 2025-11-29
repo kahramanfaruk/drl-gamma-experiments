@@ -5,7 +5,6 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 # Add project root to path to allow imports from src
-# We use 2 dirnames to go from 'experiments/run_adaptive_study.py' -> 'experiments/' -> 'project_root/'
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
@@ -37,13 +36,9 @@ PARAMS = {
     "seed": 25
 }
 
-
 def get_gamma(episode, total_episodes, method="fixed"):
     """
     Calculates gamma based on the current episode.
-    
-    Paper Logic: Start with a low gamma to stabilize initial learning (reduce variance),
-    then progressively increase it to allow for long-term planning.
     """
     if method == "fixed":
         return 0.99
@@ -94,7 +89,14 @@ def train_agent(strategy_name: str):
         seed=seed
     )
 
-    history = {"rewards": [], "gammas": []}
+    # Logging Containers
+    history = {
+        "rewards": [], 
+        "gammas": [], 
+        "loss": [], 
+        "q_values": [], 
+        "steps": []
+    }
     
     # 2. Training Loop
     for episode in range(1, PARAMS["episodes"] + 1):
@@ -111,38 +113,63 @@ def train_agent(strategy_name: str):
         state, _ = env.reset(seed=seed if episode == 1 else None)
         state = one_hot_state(state, 16)
         total_reward = 0
+        steps = 0
+        episode_losses = []
+        episode_qs = []
         done = False
 
         while not done:
+            # Capture Q-Values (Confidence Check)
+            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+            with torch.no_grad():
+                q_vals = agent.policy_net(state_tensor)
+                episode_qs.append(q_vals.max().item())
+
             action = agent.act(state)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
             next_state_vec = one_hot_state(next_state, 16)
 
             agent.memorize(state, action, reward, next_state_vec, done)
-            agent.replay()
+            
+            # Capture Loss (Stability Check)
+            loss = agent.replay()
+            if loss is not None:
+                episode_losses.append(loss)
 
             state = next_state_vec
             total_reward += reward
+            steps += 1
 
         if agent.epsilon > agent.epsilon_min:
             agent.epsilon *= agent.epsilon_decay
             agent.epsilon = max(agent.epsilon, agent.epsilon_min)
             
+        # Calculate Metrics
+        avg_loss = np.mean(episode_losses) if episode_losses else 0
+        avg_q = np.mean(episode_qs) if episode_qs else 0
+        
         # Logging
         history["rewards"].append(total_reward)
         history["gammas"].append(current_gamma)
+        history["loss"].append(avg_loss)
+        history["q_values"].append(avg_q)
+        history["steps"].append(steps)
         
+        # TensorBoard
         writer.add_scalar("Reward", total_reward, episode)
         writer.add_scalar("Gamma", current_gamma, episode)
+        writer.add_scalar("Loss", avg_loss, episode)
+        writer.add_scalar("Avg_Max_Q", avg_q, episode)
+        writer.add_scalar("Steps", steps, episode)
         
         if episode % 100 == 0:
             avg_rew = np.mean(history["rewards"][-50:])
-            print(f"   > Ep {episode}: Avg Reward={avg_rew:.3f} | Gamma={current_gamma:.4f}")
+            print(f"   > Ep {episode}: Reward={avg_rew:.3f} | Gamma={current_gamma:.3f} | Q={avg_q:.3f}")
 
     writer.close()
     
-    # Save Data
+    # Save Full Data Structure
     np.save(os.path.join(DATA_DIR, f"results_{strategy_name}.npy"), history)
     print(f" Completed {strategy_name}")
 
