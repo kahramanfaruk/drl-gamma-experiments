@@ -99,3 +99,42 @@ Stochastic Environments: Require a higher discount factor ($\gamma \approx 0.99$
 Short-Sightedness: Low $\gamma$ agents ($<0.5$) fail to solve the stochastic map, often getting stuck in local optima or wandering aimlessly.
 
 Curriculum Learning: Starting with a lower $\gamma$ ($0.8$) and increasing it to $0.99$ reduces initial variance in Q-value targets, leading to faster initial convergence compared to a fixed $\gamma=0.99$.
+
+
+
+### 🗺️ 8x8 Environment
+
+This section outlines the changes required to switch the Deep Q-Network experiments from the standard 4x4 FrozenLake map to the larger 8x8 map.
+
+#### 1. Dimensionality Change
+
+Switching maps changes the input dimension of the Neural Network:
+
+| Map Size | Discrete States | Input Vector Size |
+|----------|-----------------|-------------------|
+| 4x4      | 16              | 16                |
+| 8x8      | 64              | 64                |
+
+> ⚠️ **Important:** If `state_size` is not updated dynamically, the Neural Network will fail to load or process states, throwing `RuntimeError: shape mismatch`.
+
+#### 2. Configuration Changes
+
+The global constant `MAP_NAME` in `experiments/run_adaptive_study.py` controls the environment size.
+
+To switch to 8x8, change the configuration line at the top of the script:
+
+```python
+MAP_NAME = "8x8"  # Changed from "4x4"
+```
+
+> 💡 **Recommendation:** Since the 8x8 map is significantly harder (sparser rewards), consider increasing the episode count from `2000` to `3000`.
+
+#### 3. Running the Experiment
+
+1. Open `experiments/run_adaptive_study_8x8.py`
+2. Ensure `MAP_NAME = "8x8"` is set
+3. Run the script:
+   ```bash
+   python experiments/run_adaptive_study_8x8.py
+   ```
+4. Results will be saved in `results/adaptive_gamma_study/8x8/`
