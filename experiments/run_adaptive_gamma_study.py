@@ -2,20 +2,23 @@ import sys
 import os
 import torch
 import numpy as np
+import yaml
 from torch.utils.tensorboard import SummaryWriter
 
-# Add project root to path to allow imports from src
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
-from src.agents.dqn_agent import DQNAgent
+from src.agents import create_agent
 from src.environments.frozenlake_env import make_frozenlake_env
 from src.utils.utils import one_hot_state
+from src.visualization.visualize_adaptive_gamma_results_4x4 import plot_dual_axis
 
 # =============================================================================
 # Configuration
 # =============================================================================
-STUDY_DIR = os.path.join(ROOT_DIR, "results", "adaptive_gamma_study")
+MAP_NAME = "4x4"
+
+STUDY_DIR = os.path.join(ROOT_DIR, "results", "adaptive_gamma_study", MAP_NAME)
 MODELS_DIR = os.path.join(STUDY_DIR, "models")
 DATA_DIR = os.path.join(STUDY_DIR, "data") 
 TB_DIR = os.path.join(STUDY_DIR, "tensorboard") 
@@ -26,13 +29,12 @@ os.makedirs(TB_DIR, exist_ok=True)
 
 REWARD_SCHEDULE = (1, -1, -0.01)
 
-# We use the Stochastic environment as it highlights instability best
 PARAMS = {
     "learning_rate": 0.001, 
     "batch_size": 64, 
     "epsilon_decay": 0.995,    
     "is_slippery": True, 
-    "episodes": 2000, 
+    "episodes": 3000 if MAP_NAME == "8x8" else 2000, 
     "seed": 25
 }
 
@@ -60,33 +62,46 @@ def get_gamma(episode, total_episodes, method="fixed"):
     
     return 0.99
 
-def train_agent(strategy_name: str):
-    print(f"\n Starting Experiment: {strategy_name}")
+def train_agent(strategy_name: str, agent_type: str = "dqn"):
+    print(f"\n Starting Experiment: {strategy_name} on {MAP_NAME} | Agent: {agent_type.upper()}")
 
-    # 1. Setup
-    run_name = f"strategy_{strategy_name}"
+    run_name = f"{agent_type}_strategy_{strategy_name}_{MAP_NAME}"
     writer = SummaryWriter(log_dir=os.path.join(TB_DIR, run_name))
 
     env = make_frozenlake_env(
-        is_slippery=PARAMS["is_slippery"], 
+        is_slippery=PARAMS["is_slippery"],
+        map_name=MAP_NAME,
         reward_schedule=REWARD_SCHEDULE
     )
     
-    # Fixed seed for fair comparison (Ceteris Paribus)
+    state_size = env.observation_space.n
+    action_size = env.action_space.n
+    
     seed = PARAMS["seed"]
     np.random.seed(seed)
     torch.manual_seed(seed)
     env.action_space.seed(seed)
     
-    # Initialize Agent (Gamma 0.99 is placeholder, overwritten in loop)
-    agent = DQNAgent(
-        state_size=env.observation_space.n,
-        action_size=env.action_space.n,
-        gamma=0.99, 
-        lr=PARAMS["learning_rate"],
-        batch_size=PARAMS["batch_size"],
-        epsilon_decay=PARAMS["epsilon_decay"],
-        seed=seed
+    agent_kwargs = {
+        "lr": PARAMS["learning_rate"],
+        "epsilon_decay": PARAMS["epsilon_decay"],
+        "epsilon_start": PARAMS.get("epsilon_start", 1.0),
+        "epsilon_end": PARAMS.get("epsilon_end", 0.01),
+    }
+    
+    if agent_type.lower() == "dqn":
+        agent_kwargs.update({
+            "batch_size": PARAMS["batch_size"],
+            "device": PARAMS.get("device", "cpu")
+        })
+
+    agent = create_agent(
+        agent_type=agent_type,
+        state_size=state_size,
+        action_size=action_size,
+        gamma=0.99,
+        seed=seed,
+        **agent_kwargs
     )
 
     # Logging Containers
@@ -111,7 +126,12 @@ def train_agent(strategy_name: str):
         # ---------------------------------------------
 
         state, _ = env.reset(seed=seed if episode == 1 else None)
-        state = one_hot_state(state, 16)
+        
+        if agent_type.lower() == "dqn":
+            state = one_hot_state(state, state_size)
+        else:
+            state_idx = state
+        
         total_reward = 0
         steps = 0
         episode_losses = []
@@ -119,25 +139,31 @@ def train_agent(strategy_name: str):
         done = False
 
         while not done:
-            # Capture Q-Values (Confidence Check)
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
-            with torch.no_grad():
-                q_vals = agent.policy_net(state_tensor)
-                episode_qs.append(q_vals.max().item())
+            if agent_type.lower() == "dqn":
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+                with torch.no_grad():
+                    q_vals = agent.policy_net(state_tensor)
+                    episode_qs.append(q_vals.max().item())
+                action = agent.act(state)
+            else:
+                q_vals = agent.q_table[state_idx]
+                episode_qs.append(np.max(q_vals))
+                action = agent.act(state_idx)
 
-            action = agent.act(state)
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
-            next_state_vec = one_hot_state(next_state, 16)
-
-            agent.memorize(state, action, reward, next_state_vec, done)
             
-            # Capture Loss (Stability Check)
-            loss = agent.replay()
-            if loss is not None:
-                episode_losses.append(loss)
+            if agent_type.lower() == "dqn":
+                next_state_vec = one_hot_state(next_state, state_size)
+                agent.memorize(state, action, reward, next_state_vec, done)
+                loss = agent.replay()
+                if loss is not None:
+                    episode_losses.append(loss)
+                state = next_state_vec
+            else:
+                agent.memorize(state_idx, action, reward, next_state, done)
+                state_idx = next_state
 
-            state = next_state_vec
             total_reward += reward
             steps += 1
 
@@ -169,13 +195,34 @@ def train_agent(strategy_name: str):
 
     writer.close()
     
-    # Save Full Data Structure
-    np.save(os.path.join(DATA_DIR, f"results_{strategy_name}.npy"), history)
-    print(f" Completed {strategy_name}")
+    np.save(os.path.join(DATA_DIR, f"results_{agent_type}_{strategy_name}_{MAP_NAME}.npy"), history)
+    
+    if agent_type.lower() == "dqn":
+        model_path = os.path.join(MODELS_DIR, f"{agent_type}_{strategy_name}_{MAP_NAME}.pth")
+        torch.save(agent.policy_net.state_dict(), model_path)
+    else:
+        model_path = os.path.join(MODELS_DIR, f"{agent_type}_{strategy_name}_{MAP_NAME}.npy")
+        np.save(model_path, agent.q_table)
+    
+    print(f" Completed {agent_type.upper()} | {strategy_name} on {MAP_NAME}")
+    print(f" Model saved to: {model_path}")
 
 if __name__ == "__main__":
-    # 1. Run the Baseline (Standard Fixed Gamma)
-    train_agent("fixed")
+    config_path = os.path.join(ROOT_DIR, "config.yaml")
+    agent_type = "dqn"
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            agent_type = config.get("agent", {}).get("type", agent_type)
     
-    # 2. Run the Scientific Proposal (Adaptive Gamma)
-    train_agent("adaptive")
+    train_agent("fixed", agent_type)
+    train_agent("adaptive", agent_type)
+    
+    print("\n" + "=" * 40 + f"\nGENERATING VISUALIZATIONS | {agent_type.upper()} | {MAP_NAME}\n" + "=" * 40)
+    plot_dual_axis("rewards", "Avg Reward (Win 50)", f"{agent_type}_adaptive_rewards_{MAP_NAME}_pro.png", 
+                   "Impact of Adaptive Gamma on Learning Speed", agent_type)
+    
+    plot_dual_axis("q_values", "Avg Max Q-Value", f"{agent_type}_adaptive_q_values_{MAP_NAME}_pro.png", 
+                   "Growth of Value Estimates (Q) with Gamma", agent_type)
+    
+    print(f"\n All visualizations complete for {agent_type.upper()} | {MAP_NAME}!")

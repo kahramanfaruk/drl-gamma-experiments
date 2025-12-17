@@ -28,7 +28,7 @@ def visualize_environment(map_name):
     - Goal (G): Gold
     - Hole (H): Dark Gray
     """
-    print(f"🎨 Generating map for {map_name}...")
+    print(f"Generating map for {map_name}...")
     
     # 1. Initialize Env to get the layout
     env = make_frozenlake_env(map_name=map_name)

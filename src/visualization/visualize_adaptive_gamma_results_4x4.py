@@ -1,14 +1,9 @@
 import os
 import sys
+import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 
-# =============================================================================
-# Path Setup
-# =============================================================================
-# Level 1: src/visualization
-# Level 2: src
-# Level 3: drl-gamma-experiments (ROOT)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
 
@@ -29,7 +24,7 @@ def moving_average(data, window=50):
     if len(data) < window: return data
     return np.convolve(data, np.ones(window)/window, mode='valid')
 
-def plot_dual_axis(data_key, ylabel, output_filename, title):
+def plot_dual_axis(data_key, ylabel, output_filename, title, agent_type="dqn"):
     """
     Generates a professional dual-axis plot comparing strategies for 4x4 map.
     Includes raw data traces for scientific transparency.
@@ -53,20 +48,21 @@ def plot_dual_axis(data_key, ylabel, output_filename, title):
     data_found = False
 
     for strat in strategies:
-        # Check for both filename formats to be robust
-        # 1. results_fixed_4x4.npy
-        path_a = os.path.join(DATA_DIR, f"results_{strat}_{MAP_NAME}.npy")
-        # 2. results_fixed.npy (if saved without suffix inside the folder)
-        path_b = os.path.join(DATA_DIR, f"results_{strat}.npy")
+        path_a = os.path.join(DATA_DIR, f"results_{agent_type}_{strat}_{MAP_NAME}.npy")
+        path_b = os.path.join(DATA_DIR, f"results_{strat}_{MAP_NAME}.npy")
+        path_c = os.path.join(DATA_DIR, f"results_{agent_type}_{strat}.npy")
+        path_d = os.path.join(DATA_DIR, f"results_{strat}.npy")
         
         if os.path.exists(path_a):
             path = path_a
         elif os.path.exists(path_b):
             path = path_b
+        elif os.path.exists(path_c):
+            path = path_c
+        elif os.path.exists(path_d):
+            path = path_d
         else:
-            print(f" Missing data for {strat}")
-            print(f"   Checked: {path_a}")
-            print(f"   Checked: {path_b}")
+            print(f" Missing data for {agent_type.upper()} | {strat}")
             continue
             
         data_found = True
@@ -127,7 +123,7 @@ def plot_dual_axis(data_key, ylabel, output_filename, title):
     # Combined Legend with shadow
     ax1.legend(lines, labels, loc="upper left", fontsize=12, frameon=True, shadow=True)
     
-    plt.title(f"{title}\n({MAP_NAME} Map)", fontsize=16, pad=20)
+    plt.title(f"{title} | {agent_type.upper()} | {MAP_NAME} Map", fontsize=16, pad=20)
     plt.tight_layout()
     
     save_path = os.path.join(PLOTS_DIR, output_filename)
@@ -136,14 +132,26 @@ def plot_dual_axis(data_key, ylabel, output_filename, title):
     plt.close()
 
 if __name__ == "__main__":
-    print(f"Generating plots for {MAP_NAME} environment...")
+    config_path = os.path.join(ROOT_DIR, "config.yaml")
+    agent_type = "dqn"
     
-    # Plot 1: Performance
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            agent_type = config.get("agent", {}).get("type", agent_type)
+    
+    agent_type = agent_type.lower()
+    
+    if agent_type not in ["dqn", "qlearning"]:
+        print(f"Unknown agent type: {agent_type}. Use 'dqn' or 'qlearning'")
+        sys.exit(1)
+    
+    print(f"Generating plots for {agent_type.upper()} | {MAP_NAME} environment...")
+    
     plot_dual_axis("rewards", "Avg Reward (Window 50)", 
-                   f"adaptive_rewards_{MAP_NAME}_pro.png", 
-                   "Impact of Adaptive Gamma on Learning Speed")
+                   f"{agent_type}_adaptive_rewards_{MAP_NAME}_pro.png", 
+                   "Impact of Adaptive Gamma on Learning Speed", agent_type)
     
-    # Plot 2: Theoretical Validation (Q-Values)
     plot_dual_axis("q_values", "Avg Max Q-Value", 
-                   f"adaptive_q_values_{MAP_NAME}_pro.png", 
-                   "Growth of Value Estimates (Q) with Gamma")
+                   f"{agent_type}_adaptive_q_values_{MAP_NAME}_pro.png", 
+                   "Growth of Value Estimates (Q) with Gamma", agent_type)

@@ -2,11 +2,12 @@
 environment:
   name: FrozenLake-v1
   is_slippery: True
-  map_name: 4x4
+  map_name: 8x8
   reward_schedule: [1, -1, -0.01] # Goal, hole, normal move
 
 
 agent:
+  type: qlearning
   learning_rate: 0.001
   batch_size: 64
   buffer_size: 10000

@@ -11,7 +11,7 @@ The study is conducted in three scientific phases:
 - **Curriculum Learning (Adaptive $\gamma$)**: Implementing an adaptive schedule where $\gamma$ increases linearly from $0.8$ to $0.99$. This approach stabilizes early training variance while allowing for optimal long-term planning, based on the findings of François-Lavet et al. (2016).
 
 ## 📂 Project Structure
-```bash
+```
 drl-gamma-experiments/
 ├── src/ # Source Code
 │ ├── agents/ # DQN Agent implementation

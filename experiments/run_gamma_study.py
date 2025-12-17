@@ -2,15 +2,17 @@ import sys
 import os
 import torch
 import numpy as np
+import yaml
 from torch.utils.tensorboard import SummaryWriter
 
-# Add project root to path to allow imports from src
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
-from src.agents.dqn_agent import DQNAgent
+from src.agents import create_agent
 from src.environments.frozenlake_env import make_frozenlake_env
 from src.utils.utils import one_hot_state
+from src.visualization.visualize_metrics import run_visualizations
+from src.visualization.visualize_policy import generate_all_maps
 
 # =============================================================================
 # Configuration & Constants
@@ -21,36 +23,76 @@ STUDY_DIR = os.path.join(ROOT_DIR, "results", "gamma_study_analysis")
 # Reward Schedule: (Goal, Hole, Step)
 REWARD_SCHEDULE = (1, -1, -0.01)
 
-BEST_PARAMS_DETERMINISTIC = {
-    "learning_rate": 0.0005, 
-    "batch_size": 64, 
-    "epsilon_decay": 0.95,     
-    "is_slippery": False, 
-    "episodes": 1000, 
+# Parameters for 4x4 environment
+BEST_PARAMS_DETERMINISTIC_4X4 = {
+    "learning_rate": 0.0005,
+    "batch_size": 64,
+    "epsilon_decay": 0.95,
+    "is_slippery": False,
+    "episodes": 1000,
     "seed": 12
 }
 
-BEST_PARAMS_STOCHASTIC = {
-    "learning_rate": 0.001, 
-    "batch_size": 64, 
-    "epsilon_decay": 0.995,    
-    "is_slippery": True, 
-    "episodes": 2000, 
+BEST_PARAMS_STOCHASTIC_4X4 = {
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "epsilon_decay": 0.995,
+    "is_slippery": True,
+    "episodes": 2000,
+    "seed": 25
+}
+
+# Parameters for 8x8 environment (more episodes needed due to larger state space)
+BEST_PARAMS_DETERMINISTIC_8X8 = {
+    "learning_rate": 0.0005,
+    "batch_size": 64,
+    "epsilon_decay": 0.95,
+    "is_slippery": False,
+    "episodes": 20000,  # Increased for 8x8
+    "seed": 12
+}
+
+BEST_PARAMS_STOCHASTIC_8X8 = {
+    "learning_rate": 0.001,
+    "batch_size": 64,
+    "epsilon_decay": 0.995,
+    "is_slippery": True,
+    "episodes": 32000,  # Increased for 8x8
     "seed": 25
 }
 
 GAMMAS_TO_TEST = [0.1, 0.3, 0.5, 0.7, 0.9, 0.99]
 
 
-def train_single_gamma(gamma: float, base_params: dict, env_type: str):
+def train_single_gamma(
+    gamma: float, 
+    base_params: dict, 
+    env_type: str, 
+    env_size: str,
+    agent_type: str = "dqn"
+):
     """
-    Train a single agent with a specific gamma.
+    Train a single gamma configuration.
+    
+    Parameters
+    ----------
+    gamma : float
+        Discount factor to test.
+    base_params : dict
+        Base training parameters.
+    env_type : str
+        Environment type: "deterministic" or "stochastic".
+    env_size : str
+        Environment size: "4x4" or "8x8".
+    agent_type : str
+        Agent type: "dqn" or "qlearning".
     """
-    print(f"\n Testing Gamma = {gamma} [{env_type}]...")
+    print(f"\n Testing Gamma = {gamma} [{env_type}] | {env_size} | Agent: {agent_type.upper()}...")
 
-    # --- DYNAMIC DIRECTORY SETUP ---
-    # Create subfolders based on environment type (deterministic/stochastic)
-    type_dir = os.path.join(STUDY_DIR, env_type)
+    # Create directory structure: results/gamma_study_analysis/{env_size}/{agent_type}/{env_type}/
+    size_dir = os.path.join(STUDY_DIR, env_size)
+    agent_dir = os.path.join(size_dir, agent_type)
+    type_dir = os.path.join(agent_dir, env_type)
     models_dir = os.path.join(type_dir, "models")
     data_dir = os.path.join(type_dir, "data")
     tb_dir = os.path.join(type_dir, "tensorboard")
@@ -58,33 +100,44 @@ def train_single_gamma(gamma: float, base_params: dict, env_type: str):
     os.makedirs(models_dir, exist_ok=True)
     os.makedirs(data_dir, exist_ok=True)
     os.makedirs(tb_dir, exist_ok=True)
-    # -------------------------------
 
-    # 1. Setup TensorBoard
-    run_name = f"gamma_{gamma}"
+    run_name = f"{agent_type}_gamma_{gamma}"
     writer = SummaryWriter(log_dir=os.path.join(tb_dir, run_name))
 
-    # 2. Setup Environment
     env = make_frozenlake_env(
-        is_slippery=base_params["is_slippery"], 
+        is_slippery=base_params["is_slippery"],
+        map_name=env_size,
         reward_schedule=REWARD_SCHEDULE
     )
-    
-    # 3. Fixed Seeding
+
+    # Get state size dynamically from environment
+    state_size = env.observation_space.n
+
     seed = base_params["seed"]
     np.random.seed(seed)
     torch.manual_seed(seed)
     env.action_space.seed(seed)
+
+    agent_kwargs = {
+        "lr": base_params["learning_rate"],
+        "epsilon_decay": base_params["epsilon_decay"],
+        "epsilon_start": base_params.get("epsilon_start", 1.0),
+        "epsilon_end": base_params.get("epsilon_end", 0.01),
+    }
     
-    # 4. Initialize Agent
-    agent = DQNAgent(
-        state_size=env.observation_space.n,
+    if agent_type.lower() == "dqn":
+        agent_kwargs.update({
+            "batch_size": base_params["batch_size"],
+            "device": base_params.get("device", "cpu")
+        })
+
+    agent = create_agent(
+        agent_type=agent_type,
+        state_size=state_size,
         action_size=env.action_space.n,
         gamma=gamma,
-        lr=base_params["learning_rate"],
-        batch_size=base_params["batch_size"],
-        epsilon_decay=base_params["epsilon_decay"],
-        seed=seed
+        seed=seed,
+        **agent_kwargs
     )
 
     history = {
@@ -94,11 +147,15 @@ def train_single_gamma(gamma: float, base_params: dict, env_type: str):
         "loss": [],
         "success": []
     }
-    
-    # 5. Training Loop
+
     for episode in range(1, base_params["episodes"] + 1):
         state, _ = env.reset(seed=seed if episode == 1 else None)
-        state = one_hot_state(state, 16)
+        
+        if agent_type.lower() == "dqn":
+            state = one_hot_state(state, state_size)
+        else:
+            state_idx = state
+        
         total_reward = 0
         steps = 0
         episode_q_vals = []
@@ -107,74 +164,127 @@ def train_single_gamma(gamma: float, base_params: dict, env_type: str):
         terminated = False
 
         while not done:
-            state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
-            with torch.no_grad():
-                q_vals = agent.policy_net(state_tensor)
-                episode_q_vals.append(q_vals.max().item())
-
-            action = agent.act(state)
+            if agent_type.lower() == "dqn":
+                state_tensor = torch.FloatTensor(state).unsqueeze(0).to(agent.device)
+                with torch.no_grad():
+                    q_vals = agent.policy_net(state_tensor)
+                    episode_q_vals.append(q_vals.max().item())
+                action = agent.act(state)
+            else:
+                q_vals = agent.q_table[state_idx]
+                episode_q_vals.append(np.max(q_vals))
+                action = agent.act(state_idx)
+            
             next_state, reward, terminated, truncated, _ = env.step(action)
             done = terminated or truncated
-            next_state_vec = one_hot_state(next_state, 16)
-
-            agent.memorize(state, action, reward, next_state_vec, done)
             
-            loss = agent.replay()
-            if loss is not None:
-                episode_losses.append(loss)
+            if agent_type.lower() == "dqn":
+                next_state_vec = one_hot_state(next_state, state_size)
+                agent.memorize(state, action, reward, next_state_vec, done)
+                loss = agent.replay()
+                if loss is not None:
+                    episode_losses.append(loss)
+                state = next_state_vec
+            else:
+                agent.memorize(state_idx, action, reward, next_state, done)
+                state_idx = next_state
 
-            state = next_state_vec
             total_reward += reward
             steps += 1
 
         if agent.epsilon > agent.epsilon_min:
             agent.epsilon *= agent.epsilon_decay
             agent.epsilon = max(agent.epsilon, agent.epsilon_min)
-            
+
         avg_q_episode = np.mean(episode_q_vals) if episode_q_vals else 0
         avg_loss_episode = np.mean(episode_losses) if episode_losses else 0
         is_success = 1 if (terminated and reward > 0) else 0
-        
+
         history["rewards"].append(total_reward)
         history["steps"].append(steps)
         history["avg_q"].append(avg_q_episode)
         history["loss"].append(avg_loss_episode)
         history["success"].append(is_success)
-        
+
         writer.add_scalar("Reward", total_reward, episode)
         writer.add_scalar("Steps", steps, episode)
         writer.add_scalar("Avg_Max_Q", avg_q_episode, episode)
         writer.add_scalar("Loss", avg_loss_episode, episode)
         writer.add_scalar("Success_Rate", is_success, episode)
         writer.add_scalar("Epsilon", agent.epsilon, episode)
-        
+
         if episode % 200 == 0:
             avg_rew = np.mean(history["rewards"][-50:])
             print(f"   > Ep {episode}: Avg Reward={avg_rew:.3f} | Steps={steps} | Loss={avg_loss_episode:.4f}")
 
     writer.close()
-    
-    # 6. Save Artifacts to specific type folder
-    model_path = os.path.join(models_dir, f"dqn_gamma_{gamma}.pth")
-    torch.save(agent.policy_net.state_dict(), model_path)
-    
-    data_path = os.path.join(data_dir, f"metrics_gamma_{gamma}.npy")
+
+    if agent_type.lower() == "dqn":
+        model_path = os.path.join(models_dir, f"{agent_type}_gamma_{gamma}.pth")
+        torch.save(agent.policy_net.state_dict(), model_path)
+    else:
+        model_path = os.path.join(models_dir, f"{agent_type}_gamma_{gamma}.npy")
+        np.save(model_path, agent.q_table)
+
+    data_path = os.path.join(data_dir, f"metrics_{agent_type}_gamma_{gamma}.npy")
     np.save(data_path, history)
-    
-    print(f" Data saved for Gamma={gamma} in {env_type}/")
+
+    print(f" Data saved for {agent_type.upper()} | Gamma={gamma} | {env_size} | {env_type}/")
 
 
 def run_study():
-    print("="*40 + "\nSTARTING DETERMINISTIC STUDY\n" + "="*40)
-    for g in GAMMAS_TO_TEST: 
-        train_single_gamma(g, BEST_PARAMS_DETERMINISTIC, "deterministic")
+    """
+    Run the gamma study for a specific environment size and agent type.
     
-    print("\n" + "="*40 + "\nSTARTING STOCHASTIC STUDY\n" + "="*40)
-    for g in GAMMAS_TO_TEST: 
-        train_single_gamma(g, BEST_PARAMS_STOCHASTIC, "stochastic")
+    Parameters
+    ----------
+    Agent-Typ wird aus der config.yaml gelesen.
+    """
+    # Default-Werte, falls keine Config vorhanden ist
+    agent_type = "dqn"
+    env_size = "4x4"
 
-    print(f"\n Study Complete. Results saved to: {STUDY_DIR}")
+    config_path = os.path.join(ROOT_DIR, "config.yaml")
+    if os.path.exists(config_path):
+        with open(config_path, 'r') as f:
+            config = yaml.safe_load(f)
+            agent_type = config.get("agent", {}).get("type", agent_type)
+            env_size = config.get("environment", {}).get("map_name", env_size)
+    
+    # Select appropriate parameters based on environment size
+    if env_size == "4x4":
+        params_deterministic = BEST_PARAMS_DETERMINISTIC_4X4
+        params_stochastic = BEST_PARAMS_STOCHASTIC_4X4
+    elif env_size == "8x8":
+        params_deterministic = BEST_PARAMS_DETERMINISTIC_8X8
+        params_stochastic = BEST_PARAMS_STOCHASTIC_8X8
+    else:
+        raise ValueError(f"Unsupported environment size: {env_size}. Use '4x4' or '8x8'.")
+    
+    print("=" * 60)
+    print(f"GAMMA STUDY | {env_size} | {agent_type.upper()}")
+    print("=" * 60)
+    
+    print("\n" + "=" * 60 + f"\nSTARTING DETERMINISTIC STUDY | {env_size} | {agent_type.upper()}\n" + "=" * 60)
+    for g in GAMMAS_TO_TEST:
+        train_single_gamma(g, params_deterministic, "deterministic", env_size, agent_type)
+
+    print("\n" + "=" * 60 + f"\nSTARTING STOCHASTIC STUDY | {env_size} | {agent_type.upper()}\n" + "=" * 60)
+    for g in GAMMAS_TO_TEST:
+        train_single_gamma(g, params_stochastic, "stochastic", env_size, agent_type)
+
+    print(f"\n Study Complete. Results saved to: {STUDY_DIR}/{env_size}/{agent_type}/")
     print(f"   > Run 'tensorboard --logdir={STUDY_DIR}' to view live results.")
+    
+    print("\n" + "=" * 60 + f"\nGENERATING VISUALIZATIONS | {env_size} | {agent_type.upper()}\n" + "=" * 60)
+    print("\n Generating metric comparisons...")
+    run_visualizations(env_size=env_size, agent_type=agent_type)
+    
+    print("\n Generating policy maps...")
+    generate_all_maps(env_size=env_size, agent_type=agent_type)
+    
+    print(f"\n All visualizations complete for {agent_type.upper()} | {env_size}!")
+
 
 if __name__ == "__main__":
     run_study()
